@@ -1,0 +1,15 @@
+FROM ubuntu:22.04
+
+# Install Python
+RUN apt-get -y update && \
+    apt-get install -y python3-pip
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install project dependencies
+COPY pyproject.toml .
+COPY skill_match/ skill_match/
+COPY app/ ./app
+RUN uv sync
+
+CMD ["bash", "-c", "./app/run.sh"]
