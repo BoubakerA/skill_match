@@ -13,13 +13,13 @@ authors = [
   { name = "hdkaramoko" },
   { name = "boubakera" }
 ]
-license = { file = "LICENSE" }
-readme = "README.md"
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License"
 ]
 dependencies = [
+    "fastapi>=0.135.1",
     "ipython",
     "jupyterlab",
     "loguru",
@@ -28,12 +28,16 @@ dependencies = [
     "numpy",
     "pandas",
     "pip",
+    "pylint>=4.0.5",
     "pytest",
     "python-dotenv",
+    "requests>=2.32.5",
     "ruff",
     "scikit-learn",
+    "streamlit>=1.55.0",
     "tqdm",
     "typer",
+    "uvicorn>=0.41.0",
 ]
 requires-python = "~=3.10.0"
 

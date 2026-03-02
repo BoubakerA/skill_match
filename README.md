@@ -4,6 +4,10 @@
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
+<a target="_blank" href="https://github.com/BoubakerA/skill_match/actions/workflows/test.yml">
+  <img src="https://github.com/BoubakerA/skill_match/actions/workflows/test.yml/badge.svg" alt="testing" />
+</a>
+
 Web application that matches a resume to a job offer.
 
 ## Project Organization
