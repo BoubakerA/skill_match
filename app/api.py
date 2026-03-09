@@ -33,7 +33,7 @@ def show_welcome_page():
 
 
 @app.get("/predict", tags=["Predict"])
-async def predict(resume: str, job: str) -> str:
+async def predict(resume: str, job: str) -> float:
     """
     Match a resume against a job description.
     """
