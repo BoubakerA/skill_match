@@ -20,7 +20,5 @@ if st.button("Calculer le matching"):
                 f"{API_URL}/predict",
                 params={"resume": resume, "job": job}
             )
-            print(response.status_code)
-            print(response.text)
             result = response.json()
             st.metric("Score de matching", result)
