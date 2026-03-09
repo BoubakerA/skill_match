@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skill-match-deployment
+  labels:
+    app: skill_match
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skill-match
+  template:
+    metadata:
+      labels:
+        app: skill-match
+    spec:
+      containers:
+      - name: skill-match
+        image: boubakera/skill_match:main
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8501

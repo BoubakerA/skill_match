@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: skill-match
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - skill-match.lab.sspcloud.fr
+  rules:
+  - host: skill-match.lab.sspcloud.fr
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: skill-match-service
+            port:
+              number: 80
