@@ -15,6 +15,13 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: skill-match-service
+            name: ui-service
             port:
-              number: 80
+              number: 8501
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 8000

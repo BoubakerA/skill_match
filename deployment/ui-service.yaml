@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: skill-match-service
+  name: ui-service
 spec:
   selector:
-    app: skill-match
+    app: ui
   ports:
     - protocol: TCP
-      port: 80
+      port: 8501
       targetPort: 8501

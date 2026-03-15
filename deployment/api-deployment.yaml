@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: skill-match-deployment
-  labels:
-    app: skill_match
+  name: api-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: skill-match
+      app: api
   template:
     metadata:
       labels:
-        app: skill-match
+        app: api
     spec:
       containers:
-      - name: skill-match
+      - name: api
         image: boubakera/skill_match:main
+        command: ["uv", "run", "python", "-m", "uvicorn", "app.api:app",
+                  "--host", " 0.0.0.0", "--port", "8000"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8501
+        - containerPort: 8000
