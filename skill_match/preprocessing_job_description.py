@@ -8,7 +8,7 @@ from tqdm import tqdm
 import nltk
 from nltk.corpus import stopwords
 
-# Télécharger les stopwords si nécessaire
+
 nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
 
