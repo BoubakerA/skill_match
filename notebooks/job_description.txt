@@ -1,0 +1,36 @@
+About the Company:
+NovaInsights Analytics is a forward-thinking data solutions company focused on transforming raw data into actionable business insights. We work with clients across finance, healthcare, and e-commerce to drive innovation through data-driven strategies.
+
+Job Summary:
+We are seeking a highly motivated Senior Data Scientist to join our growing team. The ideal candidate will have strong analytical skills, experience with machine learning models, and the ability to communicate complex findings to non-technical stakeholders.
+
+Key Responsibilities:
+
+* Analyze large, complex datasets to extract meaningful insights
+* Build and deploy machine learning models for predictive analytics
+* Collaborate with cross-functional teams to define business problems
+* Develop data pipelines and optimize data workflows
+* Communicate results through visualizations and presentations
+* Stay updated with latest industry trends and technologies
+
+Required Qualifications:
+
+* Bachelor’s or Master’s degree in Data Science, Computer Science, Statistics, or related field
+* 3+ years of experience in data science or related role
+* Proficiency in Python or R
+* Experience with SQL and database systems
+* Familiarity with machine learning frameworks (e.g., TensorFlow, Scikit-learn)
+* Strong problem-solving and communication skills
+
+Preferred Qualifications:
+
+* Experience with cloud platforms (AWS, GCP, or Azure)
+* Knowledge of big data tools (Spark, Hadoop)
+* Experience in data visualization tools (Tableau, Power BI)
+
+Benefits:
+
+* Competitive salary and bonus structure
+* Flexible working hours
+* Health insurance
+* Professional development opportunities
