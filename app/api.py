@@ -1,6 +1,15 @@
 import logging
 from fastapi import FastAPI
 
+from pydantic import BaseModel
+from typing import List
+
+class MatchResponse(BaseModel):
+    similarity_score: float
+    cv_skills: List[str]
+    jd_skills: List[str]
+    present: List[str]
+    missing: List[str]
 
 logging.basicConfig(
     format="{asctime} - {levelname} - {message}",
@@ -33,11 +42,11 @@ def show_welcome_page():
     }
 
 
-@app.get("/predict", tags=["Predict"])
-async def predict(resume: str, job: str) -> float:
+@app.get("/predict", tags=["Predict"], response_model=MatchResponse)
+async def predict(resume: str, job: str) -> MatchResponse:
     """
     Match a resume against a job description.
     """
-    # score = model.predict(resume, job)
-    score = 0.9
-    return score
+    from skill_match.predict import predict as predict_fn
+    resutls = predict_fn(resume, job)
+    return resutls

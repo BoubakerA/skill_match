@@ -1,14 +1,4 @@
-gensim
-plotly
-ipywidgets
-IPython
-transformers
 torch
-tqdm
-nltk
-spacy
-huggingface-hub
+transformers
 sentence-transformers
 scikit-learn
-pdfplumber
-numpy
