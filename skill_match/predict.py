@@ -77,5 +77,14 @@ def predict(cv_text, jd_text):
     return match_cv_jd(cv_text, jd_text, _ner_pipeline, _sentence_model)
 
 if __name__ == "__main__":
-    cv_text, jd_text = "Data scientist Python Java English", "Data Science Python C R"
-    results = predict(cv_text, jd_text)
+    from skill_match.utils import read_uploaded_file
+    resume_path = "/home/onyxia/work/skill_match/data/resume.txt"
+    jd_path = "/home/onyxia/work/skill_match/data/job_description.txt"
+
+    with open(resume_path, "rb") as f:
+        resume_txt = read_uploaded_file(f)
+
+    with open(jd_path, "rb") as f:
+        jd_txt = read_uploaded_file(f)
+
+    predict(resume_txt, jd_txt)
