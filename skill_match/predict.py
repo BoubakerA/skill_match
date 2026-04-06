@@ -1,40 +1,84 @@
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity 
+from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+import spacy
+from spacy.lang.en.stop_words import STOP_WORDS
+import pandas as pd
+import re
+from nltk.stem import PorterStemmer
+
+import nltk
+nltk.download('punkt', quiet=True)
+
+nlp = spacy.load("en_core_web_sm")
+stemmer = PorterStemmer()
+
+# on va charger ESCO une seule fois au démarrage
+_esco_skills = set(pd.read_csv("/home/onyxia/work/skill_match/data/esco_skills.csv")["skill"].str.lower())
+
+
+def normalize_skill(skill: str) -> str:
+    """Lemmatise et nettoie une compétence"""
+    doc = nlp(skill.lower().strip())
+    tokens = [token.lemma_ for token in doc if token.text not in STOP_WORDS and not token.is_punct]
+    return " ".join(tokens)
+
+
+def stem_skill(skill: str) -> str:
+    """Applique le stemming sur une compétence"""
+    return " ".join([stemmer.stem(word) for word in skill.lower().split()])
 
 
 def extract_skills(text, ner_pipeline):
-    """Extrait les compétences via Nucha_SkillNER_BERT en découpant par phrases"""
+    """Extrait les compétences via NER + lemmatisation + matching ESCO"""
+    text_lower = text.lower()
     lines = str(text).split("\n")
-    all_skills = []
+
+    # on reprend l'extraction ner
+    ner_skills = []
     for line in lines:
         line = line.strip()
         if not line:
             continue
         entities = ner_pipeline(line[:512])
         skills = [
-            e["word"].lower().strip()
+            normalize_skill(e["word"])
             for e in entities
             if e["entity_group"] in ("HSKILL", "SSKILL")
             and e["score"] >= 0.7
         ]
-        all_skills.extend(skills)
-    return list(set(all_skills))
+        ner_skills.extend(skills)
+
+    # j'ai  décidé de faire un matching ESCO sur des mots entiers uniquement (il reconnaissait pas certains mots)
+    esco_matches = [
+        skill for skill in _esco_skills
+        if re.search(r'\b' + re.escape(skill) + r'\b', text_lower)
+    ]
+
+    all_skills = list(set(ner_skills) | set(esco_matches))
+    return all_skills
 
 
 def compare_skills(cv_skills, jd_skills):
-    """Compare les compétences d'un CV avec celles d'une offre d'emploi"""
+    """Compare les compétences avec stemming pour matcher les variantes"""
     cv_set = set(s.lower().strip() for s in cv_skills)
     jd_set = set(s.lower().strip() for s in jd_skills)
 
-    present = cv_set & jd_set
-    missing = jd_set - cv_set
+    # Stemming 
+    cv_stemmed = {stem_skill(s): s for s in cv_set}
+    jd_stemmed = {stem_skill(s): s for s in jd_set}
+
+    present_stems = set(cv_stemmed.keys()) & set(jd_stemmed.keys())
+    missing_stems = set(jd_stemmed.keys()) - set(cv_stemmed.keys())
+
+    present = sorted([jd_stemmed[s] for s in present_stems])
+    missing = sorted([jd_stemmed[s] for s in missing_stems])
 
     return {
         "cv_skills": sorted(cv_set),
         "jd_skills": sorted(jd_set),
-        "present": sorted(present),
-        "missing": sorted(missing),
+        "present": present,
+        "missing": missing,
     }
 
 
@@ -72,7 +116,6 @@ def predict(cv_text, jd_text):
     _ner_tokenizer = AutoTokenizer.from_pretrained(_ner_model_name)
     _ner_pipeline = pipeline("ner", model=_ner_model, tokenizer=_ner_tokenizer, aggregation_strategy="simple")
     _sentence_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    
 
     return match_cv_jd(cv_text, jd_text, _ner_pipeline, _sentence_model)
 
