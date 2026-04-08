@@ -1,0 +1,31 @@
+John Doe
+Email: john.doe@email.com
+Phone: +33 6 00 00 00 00
+Location: Paris, France
+
+Summary
+Data Scientist with experience in machine learning, data analysis, and model deployment.
+
+Skills
+- Python, SQL
+- Machine Learning, Statistics
+- Pandas, NumPy, Scikit-learn
+- Data Visualization (Matplotlib, Seaborn)
+- Git, Docker
+
+Experience
+Data Scientist – ABC Company
+2022 – Present
+- Built predictive models for customer segmentation
+- Automated data pipelines
+- Improved model performance by 15%
+
+Data Analyst – XYZ Company
+2020 – 2022
+- Analyzed business data and created dashboards
+- Provided actionable insights to stakeholders
+
+Education
+MSc in Data Science
+University of Paris
+2018 – 2020
