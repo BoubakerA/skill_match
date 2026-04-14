@@ -287,11 +287,13 @@ def gauge_chart(value: float):
 # Header
 # -----------------------------
 st.markdown('<div class="page-title">Dashboard de matching</div>', unsafe_allow_html=True)
+st.markdown('<br><br><br>', unsafe_allow_html=True)
 
 # -----------------------------
 # Layout 3 colonnes
 # -----------------------------
-col1, col2, col3 = st.columns([1.05, 1, 1.15], gap="large")
+col1, col2, col3 = st.columns([1.30, 1.05, 1.0], gap="large", vertical_alignment="top")
+
 
 with col1:
     st.markdown('<div class="section-title">Score global</div>', unsafe_allow_html=True)
