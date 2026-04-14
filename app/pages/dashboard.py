@@ -2,45 +2,20 @@ import streamlit as st
 import plotly.graph_objects as go
 import html
 
-st.set_page_config(
-    page_title="Dashboard Matching",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+result = st.session_state.get("matching_result", None)
 
-# -----------------------------
-# Données d'exemple
-# -----------------------------
-matching_score = 76
+if not result:
+    st.warning("Aucun résultat trouvé. Veuillez relancer l'analyse depuis la page principale.")
+    st.stop()
 
-job_skills = [
-    "Python",
-    "Machine Learning",
-    "Deep Learning",
-    "NLP",
-    "SQL",
-    "Data Visualization",
-    "Docker",
-    "Cloud",
-    "Git",
-]
+job_skills = result.get("jd_skills", [])
+matching_score = result.get("similarity_score", 0)
+cv_skill_matches = result.get("present", [])
+missing_job_skills = result.get("missing", [])
 
 cv_skill_matches = [
-    {"skill": "Python", "status": "match"},
-    {"skill": "Scikit-learn", "status": "match"},
-    {"skill": "Pandas", "status": "match"},
-    {"skill": "TensorFlow", "status": "partial"},
-    {"skill": "Power BI", "status": "partial"},
-    {"skill": "Excel", "status": "partial"},
-    {"skill": "Statistics", "status": "match"},
+    {"skill": s, "status": "match"} for s in cv_skill_matches
 ]
-
-missing_job_skills = [
-    "Docker",
-    "Cloud",
-    "NLP",
-]
-
 # -----------------------------
 # CSS Power BI style
 # -----------------------------

@@ -76,7 +76,7 @@ def match_cv_jd(cv_text, jd_text, ner_pipeline, embedding_model):
 
     jd_emb = embedding_model.encode([jd_text])
     cv_emb = embedding_model.encode([cv_text])
-    score = cosine_similarity(cv_emb, jd_emb)[0][0]
+    score = cosine_similarity(cv_emb, jd_emb)[0][0]*100
 
     print("Extraction des compétences du CV...")
     cv_skills = extract_skills(cv_text, ner)
