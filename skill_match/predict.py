@@ -13,10 +13,6 @@ nltk.download('punkt', quiet=True)
 nlp = spacy.load("en_core_web_sm")
 stemmer = PorterStemmer()
 
-# on va charger ESCO une seule fois au démarrage
-_esco_skills = set(pd.read_csv("/home/onyxia/work/skill_match/data/esco_skills.csv")["skill"].str.lower())
-
-
 def normalize_skill(skill: str) -> str:
     """Lemmatise et nettoie une compétence"""
     doc = nlp(skill.lower().strip())
@@ -31,7 +27,6 @@ def stem_skill(skill: str) -> str:
 
 def extract_skills(text, ner_pipeline):
     """Extrait les compétences via NER + lemmatisation + matching ESCO"""
-    text_lower = text.lower()
     lines = str(text).split("\n")
 
     # on reprend l'extraction ner
@@ -49,14 +44,8 @@ def extract_skills(text, ner_pipeline):
         ]
         ner_skills.extend(skills)
 
-    # j'ai  décidé de faire un matching ESCO sur des mots entiers uniquement (il reconnaissait pas certains mots)
-    esco_matches = [
-        skill for skill in _esco_skills
-        if re.search(r'\b' + re.escape(skill) + r'\b', text_lower)
-    ]
 
-    all_skills = list(set(ner_skills) | set(esco_matches))
-    return all_skills
+    return ner_skills
 
 
 def compare_skills(cv_skills, jd_skills):
