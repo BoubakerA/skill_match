@@ -1,0 +1,25 @@
+Job Title: Data Scientist
+
+Location: Paris, France
+Company: TechCorp
+
+Job Description
+We are looking for a Data Scientist to analyze large datasets and build predictive models.
+
+Responsibilities
+- Develop and deploy machine learning models
+- Analyze structured and unstructured data
+- Collaborate with engineering and business teams
+
+Requirements
+- Degree in Data Science, Computer Science, or related field
+- Strong knowledge of Python and SQL
+- Experience with machine learning frameworks
+- Good communication skills
+
+Nice to Have
+- Experience with cloud platforms (AWS, GCP)
+- Knowledge of Docker and APIs
+
+Contract
+Full-time
