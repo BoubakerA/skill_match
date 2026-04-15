@@ -10,8 +10,6 @@ import requests
 import streamlit as st
 from skill_match.utils import read_uploaded_file
 
-
-
 API_URL = os.getenv("API_URL", "http://localhost:8000/api")
 
 st.set_page_config(page_title="Matching Compétences")
@@ -20,9 +18,9 @@ st.title("🎯 Matching Compétences")
 st.write("Comparez un CV avec une offre d'emploi")
 
 resume = st.file_uploader(
-    "Upload resume", accept_multiple_files=False, type="txt")
+    "Upload resume", accept_multiple_files=False, type=["txt", "pdf"])
 job = st.file_uploader(
-    "Upload job offer", accept_multiple_files=False, type="txt")
+    "Upload job offer", accept_multiple_files=False, type=["txt", "pdf"])
 
 
 if st.button("Calculer le matching", use_container_width=True):
@@ -32,6 +30,8 @@ if st.button("Calculer le matching", use_container_width=True):
         resume_text = read_uploaded_file(resume)
         job_text = read_uploaded_file(job)
 
+        print(f"resume_text: {resume_text}")
+        print(f"job_text: {job_text}")
         with st.spinner("Analyse en cours..."):
             response = requests.get(
                 f"{API_URL}/predict",
