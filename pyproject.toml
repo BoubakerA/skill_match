@@ -19,7 +19,9 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 dependencies = [
+    "en-core-web-sm",
     "fastapi>=0.135.1",
+    "filetype>=1.2.0",
     "ipykernel>=7.2.0",
     "ipython",
     "jupyterlab",
@@ -32,14 +34,18 @@ dependencies = [
     "pip",
     "plotly>=6.6.0",
     "pylint>=4.0.5",
+    "pymupdf>=1.27.2.2",
+    "pytesseract>=0.3.13",
     "pytest",
     "python-dotenv",
+    "python-magic>=0.4.27",
     "requests>=2.32.5",
     "ruff",
     "scikit-learn",
     "sentence-transformers>=5.3.0",
     "spacy>=3.8.14",
     "streamlit>=1.55.0",
+    "tesseract>=0.1.3",
     "torch>=2.11.0",
     "tqdm",
     "transformers>=5.4.0",
@@ -61,3 +67,5 @@ extend-select = ["I"]  # Add import sorting
 known-first-party = ["skill_match"]
 force-sort-within-sections = true
 
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }

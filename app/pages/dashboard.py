@@ -2,45 +2,20 @@ import streamlit as st
 import plotly.graph_objects as go
 import html
 
-st.set_page_config(
-    page_title="Dashboard Matching",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+result = st.session_state.get("matching_result", None)
 
-# -----------------------------
-# Données d'exemple
-# -----------------------------
-matching_score = 76
+if not result:
+    st.warning("No results found. Please restart the analysis from the main page.")
+    st.stop()
 
-job_skills = [
-    "Python",
-    "Machine Learning",
-    "Deep Learning",
-    "NLP",
-    "SQL",
-    "Data Visualization",
-    "Docker",
-    "Cloud",
-    "Git",
-]
+job_skills = result.get("jd_skills", [])
+matching_score = result.get("similarity_score", 0)
+cv_skill_matches = result.get("present", [])
+missing_job_skills = result.get("missing", [])
 
 cv_skill_matches = [
-    {"skill": "Python", "status": "match"},
-    {"skill": "Scikit-learn", "status": "match"},
-    {"skill": "Pandas", "status": "match"},
-    {"skill": "TensorFlow", "status": "partial"},
-    {"skill": "Power BI", "status": "partial"},
-    {"skill": "Excel", "status": "partial"},
-    {"skill": "Statistics", "status": "match"},
+    {"skill": s, "status": "match"} for s in cv_skill_matches
 ]
-
-missing_job_skills = [
-    "Docker",
-    "Cloud",
-    "NLP",
-]
-
 # -----------------------------
 # CSS Power BI style
 # -----------------------------
@@ -244,7 +219,7 @@ def gauge_chart(value: float):
                 "font": {"size": 42, "color": "#111827"}
             },
             title={
-                "text": "Concordance CV / Offre",
+                "text": "Resume / Job Match",
                 "font": {"size": 22, "color": "#111827"}
             },
             gauge={
@@ -286,7 +261,7 @@ def gauge_chart(value: float):
 # -----------------------------
 # Header
 # -----------------------------
-st.markdown('<div class="page-title">Dashboard de matching</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-title">Matching Dashboard</div>', unsafe_allow_html=True)
 st.markdown('<br><br><br>', unsafe_allow_html=True)
 
 # -----------------------------
@@ -296,33 +271,33 @@ col1, col2, col3 = st.columns([1.30, 1.05, 1.0], gap="large", vertical_alignment
 
 
 with col1:
-    st.markdown('<div class="section-title">Score global</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Overall Score</div>', unsafe_allow_html=True)
     st.plotly_chart(gauge_chart(matching_score), use_container_width=True)
 
     st.markdown("""
         <div class="legend-box">
-            <div class="legend-item"><span style="color:#ef4444;">●</span> Faible adéquation</div>
-            <div class="legend-item"><span style="color:#f59e0b;">●</span> Adéquation moyenne</div>
-            <div class="legend-item"><span style="color:#22c55e;">●</span> Bonne adéquation</div>
+            <div class="legend-item"><span style="color:#ef4444;">●</span> Low match</div>
+            <div class="legend-item"><span style="color:#f59e0b;">●</span> Moderate match</div>
+            <div class="legend-item"><span style="color:#22c55e;">●</span> Strong Match </div>
         </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown('<div class="section-title">Compétences extraites de l’offre</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Job Offer Requirements</div>', unsafe_allow_html=True)
 
     skills_html = "".join([f'<span class="skill-tag">{skill}</span>' for skill in job_skills])
     st.markdown(f'<div class="tags-wrap">{skills_html}</div>', unsafe_allow_html=True)
 
     st.markdown("""
         <div class="legend-box">
-            <div class="legend-item">Dans ce bloc, figurent toutes les compétences extraites de l'offre d'emploi</div>
+            <div class="legend-item">All skills and requirements identified from the job offer</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown('<div class="section-title">Analyse des compétences du CV</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Resume Skills Analysis</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="sub-title">Compétences présentes dans le CV</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Skills Found in Resume</div>', unsafe_allow_html=True)
 
     for item in cv_skill_matches:
         col_icon, col_text = st.columns([0.1, 0.9])
@@ -343,7 +318,7 @@ with col3:
                 unsafe_allow_html=True
             )
 
-    st.markdown('<div class="sub-title">Compétences requises absentes du CV</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Missing Skills</div>', unsafe_allow_html=True)
 
     for skill in missing_job_skills:
         col_icon, col_text = st.columns([0.1, 0.9])

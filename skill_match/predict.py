@@ -1,13 +1,11 @@
+import nltk
+import spacy
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
-import spacy
 from spacy.lang.en.stop_words import STOP_WORDS
-import pandas as pd
-import re
 from nltk.stem import PorterStemmer
 
-import nltk
 nltk.download('punkt', quiet=True)
 
 nlp = spacy.load("en_core_web_sm")
@@ -76,7 +74,7 @@ def match_cv_jd(cv_text, jd_text, ner_pipeline, embedding_model):
 
     jd_emb = embedding_model.encode([jd_text])
     cv_emb = embedding_model.encode([cv_text])
-    score = cosine_similarity(cv_emb, jd_emb)[0][0]
+    score = cosine_similarity(cv_emb, jd_emb)[0][0]*100
 
     print("Extraction des compétences du CV...")
     cv_skills = extract_skills(cv_text, ner)
