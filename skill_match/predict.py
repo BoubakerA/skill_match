@@ -1,13 +1,11 @@
+import nltk
+import spacy
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
-import spacy
 from spacy.lang.en.stop_words import STOP_WORDS
-import pandas as pd
-import re
 from nltk.stem import PorterStemmer
 
-import nltk
 nltk.download('punkt', quiet=True)
 
 nlp = spacy.load("en_core_web_sm")

@@ -1,15 +1,11 @@
-import sys
-from pathlib import Path
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.append(str(ROOT_DIR))
-
 import logging
-from fastapi import FastAPI
-
-from pydantic import BaseModel
 from typing import List
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+class PredictRequest(BaseModel):
+    resume: str
+    job: str
 
 class MatchResponse(BaseModel):
     similarity_score: float
@@ -49,11 +45,11 @@ def show_welcome_page():
     }
 
 
-@app.get("/predict", tags=["Predict"], response_model=MatchResponse)
-async def predict(resume: str, job: str) -> MatchResponse:
+@app.post("/predict", tags=["Predict"], response_model=MatchResponse)
+async def predict(body: PredictRequest) -> MatchResponse:
     """
-    Match a resume against a job description.
+    Match a resume against with job description.
     """
     from skill_match.predict import predict as predict_fn
-    resutls = predict_fn(resume, job)
+    resutls = predict_fn(body.resume, body.job)
     return resutls

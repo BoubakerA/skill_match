@@ -4,7 +4,6 @@ import filetype
 import pytesseract
 import tempfile, os
 from PIL import Image
-import IPython
 
 def read_uploaded_file(file) -> str:
     raw = file.read()
