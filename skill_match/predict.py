@@ -69,7 +69,8 @@ def normalize_skill(skill: str) -> str:
         for token in doc
         if token.text not in STOP_WORDS and not token.is_punct
     ]
-    return " ".join(tokens)
+    result = " ".join(tokens)
+    return result if result else skill.lower().strip()
 
 
 def stem_skill(skill: str) -> str:
@@ -120,7 +121,9 @@ def extract_skills(text: str, ner_pipe, tokenizer, confidence: float = 0.7) -> l
         entities = ner_pipe(chunk)
         for e in entities:
             if e["entity_group"] in ("SKILL", "SOFT_SKILL") and e["score"] >= confidence:
-                skills[normalize_skill(e["word"])] = e['word']
+                word = e["word"].strip()
+            if word:
+                skills[normalize_skill(word)] = word
 
     return skills
 
@@ -141,8 +144,8 @@ def compare_skills(
     Returns a dict with cv_skills, jd_skills, present, missing, and
     semantic_matches (skills matched via embedding rather than stem).
     """
-    cv_set = {s.lower().strip() for s in cv_skills.keys()}
-    jd_set = {s.lower().strip() for s in jd_skills.keys()}
+    cv_set = {s.lower().strip() for s in cv_skills.keys() if s.strip()}
+    jd_set = {s.lower().strip() for s in jd_skills.keys() if s.strip()}
 
     # --- Pass 1: stem matching ---
     cv_stemmed = {stem_skill(s): s for s in cv_set}
