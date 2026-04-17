@@ -10,4 +10,4 @@ resources:
 
 images:
   - name: boubakera/skill_match
-    newTag: v0.0.2
+    newTag: v0.0.3

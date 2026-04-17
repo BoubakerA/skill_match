@@ -37,7 +37,7 @@ if st.button("Compute the matching", use_container_width=True):
         st.info("⏳ This may take a few minutes depending on document length.")
         with st.spinner("Analyzing documents... Please wait"):
             try:
-                result = call_matching_api(resume_text, job_text) 
+                result = call_matching_api(resume_text, job_text)
             except requests.exceptions.ConnectionError:
                 st.error("Unable to reach the API. Please check that it is running.")
                 st.stop()

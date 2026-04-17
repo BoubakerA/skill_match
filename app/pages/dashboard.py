@@ -1,6 +1,5 @@
 import streamlit as st
 import plotly.graph_objects as go
-import html
 
 result = st.session_state.get("matching_result", None)
 
@@ -297,7 +296,7 @@ with col2:
 with col3:
     st.markdown('<div class="section-title">Resume Skills Analysis</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="sub-title">Skills Found in Resume</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Skills Matched</div>', unsafe_allow_html=True)
 
     for item in cv_skill_matches:
         col_icon, col_text = st.columns([0.1, 0.9])
@@ -305,8 +304,6 @@ with col3:
         with col_icon:
             if item["status"] == "match":
                 st.markdown('<span class="icon-match">✔</span>', unsafe_allow_html=True)
-            else:
-                st.markdown('<span class="icon-partial">▬</span>', unsafe_allow_html=True)
 
         with col_text:
             st.markdown(
