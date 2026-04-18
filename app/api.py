@@ -7,12 +7,16 @@ class PredictRequest(BaseModel):
     resume: str
     job: str
 
-class MatchResponse(BaseModel):
+class SkillMatch(BaseModel):
+    skill: str
+    status: str
+
+class MatchResult(BaseModel):
+    cv_skills: list[str]
+    jd_skills: list[str]
+    matched_skills: list[SkillMatch]
+    missing: list[str]
     similarity_score: float
-    cv_skills: List[str]
-    jd_skills: List[str]
-    present: List[str]
-    missing: List[str]
 
 logging.basicConfig(
     format="{asctime} - {levelname} - {message}",
@@ -45,8 +49,8 @@ def show_welcome_page():
     }
 
 
-@app.post("/predict", tags=["Predict"], response_model=MatchResponse)
-async def predict(body: PredictRequest) -> MatchResponse:
+@app.post("/predict", tags=["Predict"], response_model=MatchResult)
+async def predict(body: PredictRequest) -> MatchResult:
     """
     Match a resume against with job description.
     """

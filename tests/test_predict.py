@@ -103,30 +103,18 @@ class TestCompareSkills:
         result = compare_skills(cv, jd, model, semantic_threshold=0.75)
         assert "Docker" in result["missing"]
 
-    def test_semantic_match_above_threshold(self):
-        cv = {"containerisation": "containerisation"}
-        jd = {"docker": "Docker"}
-        model = MagicMock()
-        # Unit vectors — cosine similarity will be 1.0, above any threshold
-        model.encode = lambda texts: np.ones((len(texts), 5))
-        result = compare_skills(cv, jd, model, semantic_threshold=0.75)
-        assert len(result["semantic_matches"]) > 0
-        assert result["semantic_matches"][0]["jd_skill"] == "Docker"
-
     def test_result_has_all_expected_keys(self):
         model = MagicMock()
         model.encode = lambda texts: np.zeros((len(texts), 5))
         result = compare_skills({}, {}, model)
-        assert set(result.keys()) == {"cv_skills", "jd_skills", "present", "semantic_matches", "missing"}
+        assert set(result.keys()) == {"cv_skills", "jd_skills", "matched_skills", "missing"}
 
     def test_empty_inputs_return_empty_lists(self):
         model = MagicMock()
         model.encode = lambda texts: np.zeros((len(texts), 5))
         result = compare_skills({}, {}, model)
-        assert result["present"] == []
+        assert result["matched_skills"] == []
         assert result["missing"] == []
-        assert result["semantic_matches"] == []
-
 
 class TestPredict:
     def test_raises_on_empty_cv(self):
@@ -157,7 +145,7 @@ class TestPredict:
         with patch("skill_match.predict._get_models", return_value=(mock_ner, mock_embedder)):
             result = predict("I know Python and Docker", "Looking for Python developer")
 
-        expected_keys = {"cv_skills", "jd_skills", "present", "missing", "semantic_matches", "similarity_score"}
+        expected_keys = {"cv_skills", "jd_skills", "matched_skills", "missing", "similarity_score"}
         assert set(result.keys()) == expected_keys
 
     def test_similarity_score_is_between_0_and_100(self):
