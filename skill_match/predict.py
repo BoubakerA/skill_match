@@ -46,7 +46,6 @@ def _get_models(
 
     if _ner_pipeline is None:
         logger.info("Loading NER model: %s", ner_model_name)
-        _ner_model = AutoModelForTokenClassification.from_pretrained(ner_model_name)
         _ner_tokenizer = AutoTokenizer.from_pretrained(ner_model_name)
         _ner_pipeline = pipeline(
                         "ner",
@@ -157,7 +156,6 @@ def compare_skills(
     present = sorted(jd_stemmed[s] for s in present_stems)
     unmatched_jd = [jd_stemmed[s] for s in unmatched_jd_stems]
 
-    # --- Pass 2: semantic matching for remaining JD skills ---
     semantic_matches = []
     truly_missing = []
 
@@ -174,13 +172,13 @@ def compare_skills(
             if best_score >= semantic_threshold:
                 semantic_matches.append(
                     {
-                        "jd_skill": jd_skill,
-                        "cv_skill": cv_list[best_idx],
+                        "jd_skill": jd_skills[jd_skill],
+                        "cv_skill": cv_skills[cv_list[best_idx]],
                         "score": round(best_score, 4),
                     }
                 )
             else:
-                truly_missing.append(jd_skill)
+                truly_missing.append(jd_skills[jd_skill])
     else:
         truly_missing = unmatched_jd
 
@@ -188,7 +186,7 @@ def compare_skills(
         "cv_skills": sorted([cv_skills[skill] for skill in cv_set]),
         "jd_skills": sorted([jd_skills[skill] for skill in jd_set]),
         "present": present,
-        "semantic_matches": semantic_matches,
+        "semantic_matches": sorted(semantic_matches),
         "missing": sorted(truly_missing),
     }
 
