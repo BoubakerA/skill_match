@@ -1,203 +1,104 @@
-from unittest.mock import MagicMock
-from skill_match.predict import (
-    normalize_skill,
-    stem_skill,
-    compare_skills,
-    extract_skills,
-    match_cv_jd,
+import pytest
+import io
+from unittest.mock import patch, MagicMock
+from skill_match.utils import (
+    read_uploaded_file,
+    clean_pdf_text,
+    is_valid_text,
+    extract_pdf_text
 )
 
+class TestCleanPdfText:
+    def test_removes_icon_artifacts(self):
+        assert "hello world" in clean_pdf_text("★ hello world ●")
 
-class TestNormalizeSkill:
-    def test_lowercases_input(self):
-        result = normalize_skill("Python")
-        assert result == result.lower()
+    def test_normalizes_multiple_newlines(self):
+        result = clean_pdf_text("line1\n\n\n\nline2")
+        assert "\n\n\n" not in result
+        assert "line1" in result
+        assert "line2" in result
 
-    def test_strips_whitespace(self):
-        result = normalize_skill("  python  ")
-        assert result == normalize_skill("python")
+    def test_preserves_regular_characters(self):
+        text = "experienced developer"
+        result = clean_pdf_text(text)
+        assert "experienced" in result
+        assert "developer" in result
 
-    def test_lemmatizes_plural(self):
-        # "skills" should lemmatize to "skill"
-        result = normalize_skill("skills")
-        assert "skill" in result
-
-    def test_removes_stopwords(self):
-        result = normalize_skill("knowledge of python")
-        assert "of" not in result
-
-    def test_removes_punctuation(self):
-        result = normalize_skill("python.")
-        assert "." not in result
-
-    def test_handles_empty_string(self):
-        result = normalize_skill("")
-        assert isinstance(result, str)
+    def test_strips_surrounding_whitespace(self):
+        assert clean_pdf_text("  hello  ").startswith("h")
 
 
-class TestStemSkill:
-    def test_stems_basic_word(self):
-        assert stem_skill("running") == "run"
+class TestIsValidText:
+    def test_empty_string_is_invalid(self):
+        assert not is_valid_text("")
 
-    def test_lowercases(self):
-        assert stem_skill("Python") == stem_skill("python")
+    def test_none_is_invalid(self):
+        assert not is_valid_text(None)
 
-    def test_stems_multiple_words(self):
-        result = stem_skill("machine learning")
-        assert isinstance(result, str)
-        assert " " in result
+    def test_short_text_is_invalid(self):
+        assert not is_valid_text("too short")
 
-    def test_handles_already_stemmed(self):
-        assert stem_skill("python") == "python"
+    def test_long_enough_text_is_valid(self):
+        assert is_valid_text("a" * 51)
 
+    def test_exactly_at_threshold_is_invalid(self):
+        assert not is_valid_text("a" * 50)
 
-class TestCompareSkills:
-    def test_finds_exact_matches(self):
-        cv = ["python", "sql"]
-        jd = ["python", "java"]
-        result = compare_skills(cv, jd)
-        assert "python" in result["present"]
+    def test_whitespace_only_is_invalid(self):
+        assert not is_valid_text("   \n\n\n   ")
 
-    def test_finds_missing_skills(self):
-        cv = ["python"]
-        jd = ["python", "docker"]
-        result = compare_skills(cv, jd)
-        assert "docker" in result["missing"]
+    def test_custom_min_chars(self):
+        assert is_valid_text("a" * 11, min_chars=10)
+        assert not is_valid_text("a" * 5, min_chars=10)
 
-    def test_no_false_positives_in_missing(self):
-        cv = ["python", "docker"]
-        jd = ["python", "docker"]
-        result = compare_skills(cv, jd)
-        assert result["missing"] == []
+class TestReadUploadedFile:
+    def _make_file(self, content: bytes) -> io.BytesIO:
+        return io.BytesIO(content)
 
-    def test_returns_all_keys(self):
-        result = compare_skills(["python"], ["python", "sql"])
-        assert "cv_skills" in result
-        assert "jd_skills" in result
-        assert "present" in result
-        assert "missing" in result
+    def test_reads_utf8_text_file(self):
+        content = b"hello world, this is a plain text file"
+        with patch("skill_match.utils.filetype.guess", return_value=None):
+            result = read_uploaded_file(self._make_file(content))
+        assert result == content.decode("utf-8")
 
-    def test_handles_empty_cv(self):
-        result = compare_skills([], ["python", "sql"])
-        assert result["present"] == []
-        assert set(result["missing"]) == {"python", "sql"}
+    def test_pdf_delegates_to_extract_pdf_text(self):
+        fake_pdf = b"%PDF-1.4 fake pdf content"
+        mock_kind = MagicMock()
+        mock_kind.mime = "application/pdf"
+        with patch("skill_match.utils.filetype.guess", return_value=mock_kind), \
+             patch("skill_match.utils.extract_pdf_text", return_value="extracted text") as mock_extract:
+            result = read_uploaded_file(self._make_file(fake_pdf))
+        assert result == "extracted text"
+        mock_extract.assert_called_once()
 
-    def test_handles_empty_jd(self):
-        result = compare_skills(["python"], [])
-        assert result["missing"] == []
-        assert result["present"] == []
-
-    def test_case_insensitive_matching(self):
-        result = compare_skills(["Python"], ["python"])
-        assert "python" in result["present"]
-
-    def test_stem_based_matching(self):
-        # "managing" and "management" should match via stemming
-        result = compare_skills(["managing"], ["management"])
-        assert result["present"] != [] or result["missing"] != ["management"]
-
-    def test_results_are_sorted(self):
-        cv = ["sql", "python", "docker"]
-        jd = ["python", "sql", "kubernetes"]
-        result = compare_skills(cv, jd)
-        assert result["present"] == sorted(result["present"])
-        assert result["missing"] == sorted(result["missing"])
+    def test_temp_file_is_cleaned_up_on_success(self):
+        fake_pdf = b"%PDF-1.4 fake"
+        mock_kind = MagicMock()
+        mock_kind.mime = "application/pdf"
+        with patch("skill_match.utils.filetype.guess", return_value=mock_kind), \
+             patch("skill_match.utils.extract_pdf_text", return_value="ok"), \
+             patch("os.unlink") as mock_unlink:
+            read_uploaded_file(self._make_file(fake_pdf))
+            assert mock_unlink.called
 
 
-class TestExtractSkills:
-    def _make_ner_pipeline(self, entities):
-        """Returns a mock NER pipeline that always returns given entities."""
-        mock = MagicMock()
-        mock.return_value = entities
-        return mock
+class TestExtractPdfText:
+    def test_uses_pymupdf_when_text_is_valid(self):
+        with patch("skill_match.utils.extract_text_pymupdf", return_value="a" * 100), \
+             patch("skill_match.utils.extract_text_ocr") as mock_ocr:
+            result = extract_pdf_text("fake.pdf")
+        assert result == "a" * 100
+        mock_ocr.assert_not_called()
 
-    def test_returns_list(self):
-        ner = self._make_ner_pipeline([])
-        result = extract_skills("Some text", ner)
-        assert isinstance(result, list)
+    def test_falls_back_to_ocr_when_text_is_too_short(self):
+        with patch("skill_match.utils.extract_text_pymupdf", return_value="short"), \
+             patch("skill_match.utils.extract_text_ocr", return_value="ocr result") as mock_ocr:
+            result = extract_pdf_text("fake.pdf")
+        assert result == "ocr result"
+        mock_ocr.assert_called_once_with("fake.pdf")
 
-    def test_extracts_hskill_entities(self):
-        ner = self._make_ner_pipeline([
-            {"word": "Python", "entity_group": "HSKILL", "score": 0.95}
-        ])
-        result = extract_skills("Python developer", ner)
-        assert len(result) > 0
-
-    def test_extracts_sskill_entities(self):
-        ner = self._make_ner_pipeline([
-            {"word": "communication", "entity_group": "SSKILL", "score": 0.85}
-        ])
-        result = extract_skills("Good communication skills", ner)
-        assert len(result) > 0
-
-    def test_filters_low_confidence_entities(self):
-        ner = self._make_ner_pipeline([
-            {"word": "Python", "entity_group": "HSKILL", "score": 0.5}
-        ])
-        result = extract_skills("Python developer", ner)
-        assert result == []
-
-    def test_ignores_unknown_entity_groups(self):
-        ner = self._make_ner_pipeline([
-            {"word": "Paris", "entity_group": "LOC", "score": 0.99}
-        ])
-        result = extract_skills("Based in Paris", ner)
-        assert result == []
-
-    def test_handles_empty_text(self):
-        ner = self._make_ner_pipeline([])
-        result = extract_skills("", ner)
-        assert result == []
-
-    def test_handles_multiline_text(self):
-        ner = self._make_ner_pipeline([
-            {"word": "Python", "entity_group": "HSKILL", "score": 0.9}
-        ])
-        text = "Line one\nLine two with Python\nLine three"
-        result = extract_skills(text, ner)
-        assert isinstance(result, list)
-
-
-class TestMatchCvJd:
-    def _make_mocks(self, cv_entities=None, jd_entities=None):
-        cv_entities = cv_entities or [{"word": "python", "entity_group": "HSKILL", "score": 0.9}]
-        jd_entities = jd_entities or [{"word": "python", "entity_group": "HSKILL", "score": 0.9},
-                                     {"word": "docker", "entity_group": "HSKILL", "score": 0.85}]
-
-        call_count = {"n": 0}
-        def ner_side_effect(text):
-            result = cv_entities if call_count["n"] == 0 else jd_entities
-            call_count["n"] += 1
-            return result
-
-        ner_pipeline = MagicMock(side_effect=ner_side_effect)
-
-        embedding_model = MagicMock()
-        embedding_model.encode.return_value = [[0.1, 0.2, 0.3]]
-
-        return ner_pipeline, embedding_model
-
-    def test_returns_expected_keys(self):
-        ner, emb = self._make_mocks()
-        result = match_cv_jd("cv text", "jd text", ner, emb)
-        assert "cv_skills" in result
-        assert "jd_skills" in result
-        assert "present" in result
-        assert "missing" in result
-        assert "similarity_score" in result
-
-    def test_similarity_score_is_float(self):
-        ner, emb = self._make_mocks()
-        result = match_cv_jd("cv text", "jd text", ner, emb)
-        assert isinstance(result["similarity_score"], float)
-
-    def test_similarity_score_is_rounded(self):
-        ner, emb = self._make_mocks()
-        result = match_cv_jd("cv text", "jd text", ner, emb)
-        # Should have at most 4 decimal places
-        assert result["similarity_score"] == round(result["similarity_score"], 4)
-
-    def test_calls_embedding_model_twice(self):
-        ner, emb = self._make_mocks()
-        match_cv_jd("cv text", "jd text", ner, emb)
-        assert emb.encode.call_count == 2
+    def test_falls_back_to_ocr_when_pymupdf_returns_empty(self):
+        with patch("skill_match.utils.extract_text_pymupdf", return_value=""), \
+             patch("skill_match.utils.extract_text_ocr", return_value="ocr fallback"):
+            result = extract_pdf_text("fake.pdf")
+        assert result == "ocr fallback"

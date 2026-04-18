@@ -1,139 +1,175 @@
-import io
 import pytest
-from unittest.mock import MagicMock, patch
-
-from skill_match.utils import (
-    read_uploaded_file,
-    clean_pdf_text,
-    is_valid_text,
-    extract_pdf_text,
+import numpy as np
+from unittest.mock import patch, MagicMock
+from skill_match.predict import (
+    normalize_skill,
+    stem_skill,
+    extract_skills,
+    compare_skills,
+    predict,
 )
 
-
-class TestIsValidText:
-    def test_returns_false_for_empty_string(self):
-        assert is_valid_text("") is False
-
-    def test_returns_false_for_none(self):
-        assert is_valid_text(None) is False
-
-    def test_returns_false_for_short_text(self):
-        assert is_valid_text("too short") is False
-
-    def test_returns_true_for_long_enough_text(self):
-        assert is_valid_text("a" * 51) is True
-
-    def test_counts_chars_without_newlines(self):
-        # 50 newlines should not count as valid text
-        assert is_valid_text("\n" * 100) is False
-
-    def test_custom_min_chars(self):
-        assert is_valid_text("hello", min_chars=3) is True
-        assert is_valid_text("hi", min_chars=3) is False
+def make_ner_entity(word: str, entity_group: str, score: float = 0.95) -> dict:
+    return {"word": word, "entity_group": entity_group, "score": score}
 
 
-class TestCleanPdfText:
-    def test_removes_extra_newlines(self):
-        text = "line1\n\n\n\n\nline2"
-        result = clean_pdf_text(text)
-        assert "\n\n\n" not in result
+def mock_ner_pipe(entities_by_chunk: list[list[dict]]):
+    """Returns a callable that yields a different entity list per call."""
+    calls = iter(entities_by_chunk)
+    return lambda text: next(calls, [])
+
+
+class TestNormalizeSkill:
+    def test_lowercases_input(self):
+        result = normalize_skill("Python")
+        assert result == result.lower()
+
+    def test_removes_stopwords(self):
+        result = normalize_skill("knowledge of Python")
+        assert "of" not in result.split()
+
+    def test_lemmatizes(self):
+        result = normalize_skill("managing")
+        assert result == "manage"
+
+    def test_handles_all_stopwords_with_fallback(self):
+        result = normalize_skill("the")
+        assert isinstance(result, str)
+        assert len(result) > 0
 
     def test_strips_whitespace(self):
-        result = clean_pdf_text("   hello   ")
-        assert result == "hello"
-
-    def test_preserves_normal_text(self):
-        text = "Python developer with 5 years of experience."
-        assert clean_pdf_text(text) == text
-
-    def test_preserves_accented_characters(self):
-        text = "Développeur expérimenté"
-        result = clean_pdf_text(text)
-        assert "é" in result
+        assert normalize_skill("  python  ") == normalize_skill("python")
 
 
-class TestReadUploadedFile:
-    def _make_file(self, content: bytes) -> io.BytesIO:
-        return io.BytesIO(content)
+class TestStemSkill:
+    def test_morphological_variants_produce_same_stem(self):
+        assert stem_skill("managing") == stem_skill("management")
 
-    def test_reads_utf8_text_file(self):
-        content = b"Hello, I am a software engineer."
-        file = self._make_file(content)
-        # Patch filetype.guess to return None (text/plain fallback)
-        with patch("skill_match.utils.filetype.guess", return_value=None):
-            result = read_uploaded_file(file)
-        assert result == "Hello, I am a software engineer."
+    def test_lowercases_input(self):
+        assert stem_skill("Python") == stem_skill("python")
 
-    def test_reads_windows_1252_encoding(self):
-        content = "Développeur".encode("windows-1252")
-        file = self._make_file(content)
-        with patch("skill_match.utils.filetype.guess", return_value=None):
-            result = read_uploaded_file(file)
-        assert "veloppeur" in result  # accent may differ by encoding fallback
+    def test_multi_word_skill(self):
+        result = stem_skill("machine learning")
+        assert isinstance(result, str)
+        assert " " in result
 
-    def test_raises_on_unsupported_file_type(self):
-        mock_kind = MagicMock()
-        mock_kind.mime = "image/png"
-        file = self._make_file(b"\x89PNG\r\n")
-        with patch("skill_match.utils.filetype.guess", return_value=mock_kind):
-            with pytest.raises(ValueError, match="Unsupported file type"):
-                read_uploaded_file(file)
+class TestExtractSkills:
+    def _make_tokenizer(self):
+        tok = MagicMock()
+        tok.tokenize = lambda text: text.split()
+        return tok
 
-    def test_reads_pdf_file(self, tmp_path):
-        # Create a minimal real PDF with PyMuPDF
-        try:
-            import fitz
-            pdf_path = tmp_path / "test.pdf"
-            doc = fitz.open()
-            page = doc.new_page()
-            page.insert_text((50, 100), "Python developer with experience in machine learning.")
-            doc.save(str(pdf_path))
-            doc.close()
+    def test_extracts_skill_entities(self):
+        ner = mock_ner_pipe([[make_ner_entity("Python", "SKILL")]])
+        result = extract_skills("Python developer", ner, self._make_tokenizer())
+        assert any("python" in k for k in result.keys())
 
-            with open(pdf_path, "rb") as f:
-                raw = f.read()
+    def test_extracts_soft_skill_entities(self):
+        ner = mock_ner_pipe([[make_ner_entity("leadership", "SOFT_SKILL")]])
+        result = extract_skills("leadership experience", ner, self._make_tokenizer())
+        assert len(result) > 0
 
-            mock_kind = MagicMock()
-            mock_kind.mime = "application/pdf"
-            file = io.BytesIO(raw)
+    def test_filters_low_confidence_entities(self):
+        ner = mock_ner_pipe([[make_ner_entity("Python", "SKILL", score=0.5)]])
+        result = extract_skills("Python developer", ner, self._make_tokenizer(), confidence=0.7)
+        assert len(result) == 0
 
-            with patch("skill_match.utils.filetype.guess", return_value=mock_kind):
-                result = read_uploaded_file(file)
+    def test_ignores_unknown_entity_groups(self):
+        ner = mock_ner_pipe([[make_ner_entity("Paris", "LOC")]])
+        result = extract_skills("Based in Paris", ner, self._make_tokenizer())
+        assert len(result) == 0
 
-            assert isinstance(result, str)
-            assert len(result) > 0
-        except ImportError:
-            pytest.skip("PyMuPDF not available")
+    def test_deduplicates_same_skill(self):
+        entities = [
+            make_ner_entity("Python", "SKILL"),
+            make_ner_entity("python", "SKILL"),
+        ]
+        ner = mock_ner_pipe([entities])
+        result = extract_skills("Python python", ner, self._make_tokenizer())
+        assert len(result) == 1
+
+    def test_returns_dict(self):
+        ner = mock_ner_pipe([[]])
+        result = extract_skills("some text", ner, self._make_tokenizer())
+        assert isinstance(result, dict)
+
+class TestCompareSkills:
+    def test_missing_skill_appears_in_missing(self):
+        cv = {"python": "Python"}
+        jd = {"docker": "Docker"}
+        model = MagicMock()
+
+        model.encode = lambda texts: np.zeros((len(texts), 5))
+        result = compare_skills(cv, jd, model, semantic_threshold=0.75)
+        assert "Docker" in result["missing"]
+
+    def test_semantic_match_above_threshold(self):
+        cv = {"containerisation": "containerisation"}
+        jd = {"docker": "Docker"}
+        model = MagicMock()
+        # Unit vectors — cosine similarity will be 1.0, above any threshold
+        model.encode = lambda texts: np.ones((len(texts), 5))
+        result = compare_skills(cv, jd, model, semantic_threshold=0.75)
+        assert len(result["semantic_matches"]) > 0
+        assert result["semantic_matches"][0]["jd_skill"] == "Docker"
+
+    def test_result_has_all_expected_keys(self):
+        model = MagicMock()
+        model.encode = lambda texts: np.zeros((len(texts), 5))
+        result = compare_skills({}, {}, model)
+        assert set(result.keys()) == {"cv_skills", "jd_skills", "present", "semantic_matches", "missing"}
+
+    def test_empty_inputs_return_empty_lists(self):
+        model = MagicMock()
+        model.encode = lambda texts: np.zeros((len(texts), 5))
+        result = compare_skills({}, {}, model)
+        assert result["present"] == []
+        assert result["missing"] == []
+        assert result["semantic_matches"] == []
 
 
-class TestExtractPdfText:
-    def test_extracts_text_from_digital_pdf(self, tmp_path):
-        try:
-            import fitz
-            pdf_path = tmp_path / "digital.pdf"
-            doc = fitz.open()
-            page = doc.new_page()
-            page.insert_text((50, 100), "Experienced Python developer skilled in machine learning and data science.")
-            doc.save(str(pdf_path))
-            doc.close()
+class TestPredict:
+    def test_raises_on_empty_cv(self):
+        with pytest.raises(ValueError, match="cv_text"):
+            predict("", "some job description text here")
 
-            result = extract_pdf_text(str(pdf_path))
-            assert "Python" in result
-        except ImportError:
-            pytest.skip("PyMuPDF not available")
+    def test_raises_on_empty_jd(self):
+        with pytest.raises(ValueError, match="jd_text"):
+            predict("some cv text here", "")
 
-    def test_returns_string(self, tmp_path):
-        try:
-            import fitz
-            pdf_path = tmp_path / "test.pdf"
-            doc = fitz.open()
-            page = doc.new_page()
-            page.insert_text((50, 100), "Software engineer resume with skills in Python and Docker.")
-            doc.save(str(pdf_path))
-            doc.close()
+    def test_raises_on_non_string_cv(self):
+        with pytest.raises(ValueError):
+            predict(None, "some job description text here")
 
-            result = extract_pdf_text(str(pdf_path))
-            assert isinstance(result, str)
-        except ImportError:
-            pytest.skip("PyMuPDF not available")
+    def test_raises_on_non_string_jd(self):
+        with pytest.raises(ValueError):
+            predict("some cv text here", 123)
 
+    def test_returns_expected_keys(self):
+        mock_ner = MagicMock()
+        mock_ner.return_value = []
+        mock_ner.tokenizer = MagicMock()
+        mock_ner.tokenizer.tokenize = lambda t: t.split()
+
+        mock_embedder = MagicMock()
+        mock_embedder.encode = lambda texts: np.zeros((len(texts), 5))
+
+        with patch("skill_match.predict._get_models", return_value=(mock_ner, mock_embedder)):
+            result = predict("I know Python and Docker", "Looking for Python developer")
+
+        expected_keys = {"cv_skills", "jd_skills", "present", "missing", "semantic_matches", "similarity_score"}
+        assert set(result.keys()) == expected_keys
+
+    def test_similarity_score_is_between_0_and_100(self):
+        mock_ner = MagicMock()
+        mock_ner.return_value = []
+        mock_ner.tokenizer = MagicMock()
+        mock_ner.tokenizer.tokenize = lambda t: t.split()
+
+        mock_embedder = MagicMock()
+        mock_embedder.encode = lambda texts: np.ones((len(texts), 5))
+
+        with patch("skill_match.predict._get_models", return_value=(mock_ner, mock_embedder)):
+            result = predict("cv text here with some words", "jd text here with some words")
+
+        assert 0 <= result["similarity_score"] <= 100
