@@ -115,7 +115,7 @@ def extract_skills(text: str, ner_pipe, tokenizer, confidence: float = 0.7) -> l
     """
     chunks = _split_into_chunks(str(text), tokenizer)
     skills = {}
-
+    word = None
     for chunk in chunks:
         entities = ner_pipe(chunk)
         for e in entities:
