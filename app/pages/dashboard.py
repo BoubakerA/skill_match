@@ -9,12 +9,9 @@ if not result:
 
 job_skills = result.get("jd_skills", [])
 matching_score = result.get("similarity_score", 0)
-cv_skill_matches = result.get("present", [])
+cv_skill_matches = result.get("matched_skills", [])
 missing_job_skills = result.get("missing", [])
 
-cv_skill_matches = [
-    {"skill": s, "status": "match"} for s in cv_skill_matches
-]
 # -----------------------------
 # CSS Power BI style
 # -----------------------------
@@ -304,6 +301,9 @@ with col3:
         with col_icon:
             if item["status"] == "match":
                 st.markdown('<span class="icon-match">✔</span>', unsafe_allow_html=True)
+            else:
+                st.markdown('<span class="icon-partial">▬</span>', unsafe_allow_html=True)
+
 
         with col_text:
             st.markdown(

@@ -46,7 +46,6 @@ def _get_models(
 
     if _ner_pipeline is None:
         logger.info("Loading NER model: %s", ner_model_name)
-        _ner_tokenizer = AutoTokenizer.from_pretrained(ner_model_name)
         _ner_pipeline = pipeline(
                         "ner",
                         model="feliponi/hirly-ner-multi",
@@ -115,21 +114,15 @@ def extract_skills(text: str, ner_pipe, tokenizer, confidence: float = 0.7) -> l
     """
     chunks = _split_into_chunks(str(text), tokenizer)
     skills = {}
-    word = None
     for chunk in chunks:
         entities = ner_pipe(chunk)
         for e in entities:
             if e["entity_group"] in ("SKILL", "SOFT_SKILL") and e["score"] >= confidence:
                 word = e["word"].strip()
-            if word:
-                skills[normalize_skill(word)] = word
+                if word:
+                    skills[normalize_skill(word)] = word
 
     return skills
-
-def _semantic_similarity(skill_a: str, skill_b: str, model: SentenceTransformer) -> float:
-    emb = model.encode([skill_a, skill_b])
-    return float(cosine_similarity([emb[0]], [emb[1]])[0][0])
-
 
 def compare_skills(
     cv_skills: dict[str, str],
@@ -140,23 +133,25 @@ def compare_skills(
     """
     Compare CV and JD skill sets using a two-pass strategy:
 
-    Returns a dict with cv_skills, jd_skills, present, missing, and
-    semantic_matches (skills matched via embedding rather than stem).
+    Returns a dict with cv_skills, jd_skills, matched_skills, and missing.
+    matched_skills contains both exact matches (status: "match") and
+    semantic matches (status: "partial"), all expressed as original JD skill names.
     """
     cv_set = {s.lower().strip() for s in cv_skills.keys() if s.strip()}
     jd_set = {s.lower().strip() for s in jd_skills.keys() if s.strip()}
 
-    # --- Pass 1: stem matching ---
     cv_stemmed = {stem_skill(s): s for s in cv_set}
     jd_stemmed = {stem_skill(s): s for s in jd_set}
 
     present_stems = set(cv_stemmed) & set(jd_stemmed)
     unmatched_jd_stems = set(jd_stemmed) - present_stems
 
-    present = sorted(jd_stemmed[s] for s in present_stems)
+    matched_skills = [
+        {"skill": jd_skills[jd_stemmed[s]], "status": "match"}
+        for s in present_stems
+    ]
     unmatched_jd = [jd_stemmed[s] for s in unmatched_jd_stems]
 
-    semantic_matches = []
     truly_missing = []
 
     if unmatched_jd and cv_set:
@@ -170,23 +165,18 @@ def compare_skills(
             best_score = float(sims[best_idx])
 
             if best_score >= semantic_threshold:
-                semantic_matches.append(
-                    {
-                        "jd_skill": jd_skills[jd_skill],
-                        "cv_skill": cv_skills[cv_list[best_idx]],
-                        "score": round(best_score, 4),
-                    }
+                matched_skills.append(
+                    {"skill": jd_skills[jd_skill], "status": "partial"}
                 )
             else:
                 truly_missing.append(jd_skills[jd_skill])
     else:
-        truly_missing = unmatched_jd
+        truly_missing = [jd_skills[s] for s in unmatched_jd]
 
     return {
         "cv_skills": sorted([cv_skills[skill] for skill in cv_set]),
         "jd_skills": sorted([jd_skills[skill] for skill in jd_set]),
-        "present": present,
-        "semantic_matches": sorted(semantic_matches),
+        "matched_skills": sorted(matched_skills, key=lambda x: (x["status"], x["skill"])),
         "missing": sorted(truly_missing),
     }
 
@@ -219,8 +209,7 @@ def match_cv_jd(
     logger.info("=" * 50)
     logger.info("JD skills      : %s", result["jd_skills"])
     logger.info("CV skills      : %s", result["cv_skills"])
-    logger.info("Present        : %s", result["present"])
-    logger.info("Semantic match : %s", result["semantic_matches"])
+    logger.info("Present        : %s", result["matched_skills"])
     logger.info("Missing        : %s", result["missing"])
     logger.info("=" * 50)
 
