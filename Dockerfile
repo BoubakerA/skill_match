@@ -16,4 +16,3 @@ COPY skill_match/ skill_match/
 COPY app/ ./app
 RUN uv sync
 
-CMD ["bash", "-c", "./app/run.sh"]
