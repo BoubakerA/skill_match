@@ -41,7 +41,7 @@ The app combines two complementary approaches:
 | | URL |
 |---|---|
 | **Web app** | https://skill-match.lab.sspcloud.fr |
-| **REST API** | https://skill-match.lab.sspcloud.fr/api |
+| **REST API** | https://skill-match.lab.sspcloud.fr/api/docs |
 
 ---
 
@@ -72,32 +72,33 @@ kubectl apply -k deployment/
 
 ```
 skill_match/
-├── app/
+├── app
 │   ├── api.py
 │   ├── app.py
-│   └── pages/
+│   └── pages
 │       └── dashboard.py
-├── data/
-├── deployment/
+├── deployment
 │   ├── api-deployment.yaml
 │   ├── api-service.yaml
 │   ├── ingress.yaml
 │   ├── kustomization.yaml
 │   ├── ui-deployment.yaml
 │   └── ui-service.yaml
-├── notebooks/
+├── Dockerfile
+├── docs
+├── LICENSE
+├── notebooks
 │   └── nlp_final.ipynb
-├── skill_match/
+├── pyproject.toml
+├── README.md
+├── skill_match
 │   ├── __init__.py
 │   ├── predict.py
 │   └── utils.py
-├── tests/
-│   ├── cv.txt
-│   ├── jd.txt
-│   └── test_data.py
-├── Dockerfile
-├── pyproject.toml
-└── README.md
+├── tests
+│   ├── test_predict.py
+│   └── test_utils.py
+└── uv.lock
 ```
 
 ---
@@ -107,23 +108,23 @@ skill_match/
 ### Install dependencies
 
 ```bash
-pip install -e .
+uv sync
 ```
 
 ### Run the API
 
 ```bash
-uvicorn app.api:app --reload
+uv run uvicorn app.api:app --reload
 ```
 
 ### Run the UI
 
 ```bash
-streamlit run app/app.py
+uv run streamlit run app/app.py
 ```
 
 ### Run tests
 
 ```bash
-pytest tests/
+uv run pytest
 ```
